@@ -10,9 +10,10 @@ cd path/spamTopWord
 sbt package
 ```
 
+### warning!!! /usr/hdp/current/spark-client and .jar path could be different for you machine 
 ```
-YOUR_SPARK_HOME/bin/spark-submit \
-  --class "SimpleApp" \
+/usr/hdp/current/spark-client/bin/spark-submit \
+  --class "spamTopWord" \
   --master local[4] \
-  target/scala-2.10/simple-project_2.10-1.0.jar
+  /root/project/spark-project-2017/spamTopWords/target/scala-2.11/spamtopword_2.11-0.1-SNAPSHOT.jar
 ```

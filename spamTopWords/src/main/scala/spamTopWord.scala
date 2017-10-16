@@ -10,10 +10,10 @@ object spamTopWord {
   def probaWordDir(sc:SparkContext)(filesDir:String)
   :(RDD[(String, Double)], Long) = {
 
-    val probaWord = Map("red" -> 1, "azure" -> 2)
-    val nbFiles = 0
+	val probaWord: RDD[(String, Double)] = sc.emptyRDD[(String, Double)]
+	val nbFiles = 0
 
-    return (probaWord, nbFiles)
+	return (probaWord, nbFiles)
   }
 
 
@@ -24,7 +24,8 @@ object spamTopWord {
     probaDefault: Double // default value when a probability is missing
   ):RDD[(String, Double)] = {
 
-  return  Map("red" -> 1, "azure" -> 2)
+   
+	return probaWC
 
   }
 
