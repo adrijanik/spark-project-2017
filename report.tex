@@ -111,6 +111,23 @@ Installation of sbt:
 \begin{lstlisting}[language=bash]
 $wget http://dl.bintray.com/sbt/rpm/sbt-0.13.12.rpm
 \end{lstlisting}
+Edit file /etc/yum.repos.d/sandbox.repo:
+\begin{lstlisting}[language=bash]
+~[sandbox]
+~name=Sandbox repository (tutorials)
+~gpgcheck=0
+~enabled=0
+~baseurl=http://dev2.hortonworks.com.s3.amazonaws.com/repo/dev/master/utils/
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash]
+$yum clean all
+$yum update
+$sudo yum localinstall sbt-0.13.12.rpm
+$sbt -update
+$sudo scp -P 2222 -r ../spamTopWords/*  root@127.0.0.1:/tmp/spamTopWords/
+$sbt package
+\end{lstlisting}
 
 
 
