@@ -92,7 +92,28 @@ Secondly we open Virtual Box machine with Hortonworks, we signed in with maria\_
 \begin{lstlisting}[language=bash]
 $ssh root@127.0.0.1 -p 2222
 \end{lstlisting}
+In the meantime upload to the virtual machine ling-spam.zip with:
+\begin{lstlisting}[language=bash]
+$sudo scp -P 2222 ../ling-spam.zip  root@127.0.0.1:/tmp/
+\end{lstlisting}
+We unzipped ling-spam.zip with:
+\begin{lstlisting}[language=bash]
+$unzip ling-spam.zip -d /tmp/ling-spam
+\end{lstlisting}
+We putted files into /tmp/ling-spam/ folder in hdfs with:
+\begin{lstlisting}[language=bash]
+$hdfs dfs -put ./ling-spam/ham /tmp/ling-spam/ham
+$hdfs dfs -put ./ling-spam/spam /tmp/ling-spam/spam
+\end{lstlisting}
+
 \section{Task}
+Installation of sbt:
+\begin{lstlisting}[language=bash]
+$wget http://dl.bintray.com/sbt/rpm/sbt-0.13.12.rpm
+\end{lstlisting}
+
+
+
 \section{Task}
 \section{Task}
 \section{Task}
