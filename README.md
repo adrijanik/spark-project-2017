@@ -15,5 +15,5 @@ sbt package
 /usr/hdp/current/spark-client/bin/spark-submit \
   --class "spamTopWord" \
   --master local[4] \
-  /root/project/spark-project-2017/spamTopWords/target/scala-2.11/spamtopword_2.11-0.1-SNAPSHOT.jar
+  /root/project/spark-project-2017/spamTopWords/target/scala-2.11/spamtopword_2.11-0.1-SNAPSHOT.jar hdfs:///project/
 ```

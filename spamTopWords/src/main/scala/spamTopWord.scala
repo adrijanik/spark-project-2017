@@ -49,7 +49,7 @@ object spamTopWord {
 
   def main(args: Array[String]) {
 
-  	if(args.size > 0)
+  	if(args.size > 0){
 		val conf = new SparkConf().setAppName("Spam Filter Application").setMaster("local")
 		val sc = new SparkContext(conf)
 		println("Got the path:"+args(0))
@@ -58,6 +58,7 @@ object spamTopWord {
 		val (probaW, nbFiles) = probaWordDir(sc)(ff)
 		println("number of files in "+ ff +":")
 		println(nbFiles)
+	}
 	else
 		println("Please write te directory where the ham and span")       
 
