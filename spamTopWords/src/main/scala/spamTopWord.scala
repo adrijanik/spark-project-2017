@@ -58,7 +58,7 @@ object spamTopWord {
 		//process ham files
 		val (probaHW, nbHFiles) = probaWordDir(sc)(args(0)+"ham/*.txt")
 		print("number of files in "+ args(0)+"ham/*.txt" +":")
-		println(nbSFiles)
+		println(nbHFiles)
 
 		//process span files
 		val (probaSW, nbSFiles) = probaWordDir(sc)(args(0)+"span/*.txt")
