@@ -111,63 +111,157 @@ Installation of sbt:
 \begin{lstlisting}[language=bash]
 $wget http://dl.bintray.com/sbt/rpm/sbt-0.13.12.rpm
 \end{lstlisting}
+Edit file /etc/yum.repos.d/sandbox.repo:
+\begin{lstlisting}[language=bash]
+~[sandbox]
+~name=Sandbox repository (tutorials)
+~gpgcheck=0
+~enabled=0
+~baseurl=http://dev2.hortonworks.com.s3.amazonaws.com/repo/dev/master/utils/
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash]
+$yum clean all
+$yum update
+$sudo yum localinstall sbt-0.13.12.rpm
+$sbt -update
+$sudo scp -P 2222 -r ../spamTopWords/*  root@127.0.0.1:/tmp/spamTopWords/
+$sbt package
+\end{lstlisting}
 
 
 
 \section{Task}
+Firstly we created Spark Context with:
+\begin{lstlisting}[language=scala]
+/* Spark Context */
+object Spark {
+    val sc = new SparkContext(new SparkConf().setAppName("test").setMaster("local[*]"))
+}
+\end{lstlisting}
+Than we called function \textit{probaWordDir} with defined spark context as well as folder name for which we want to count words.
+\begin{lstlisting}[language=scala]
+
+val context = Spark.sc // declaration of Spark context
+
+var probas, numFiles = probaWordDir(context)("hdfs:///tmp/ling-spam/ham/ham/") 
+// call function with context and folder name and save results to probas and 
+// numFiles variable containing as follow probabilities of words 
+// occurances and number of files
+\end{lstlisting}
+\begin{lstlisting}[language=scala]
+eta = sc.wholeTextFiles(filesDir).collect()nd{lstlisting}
+\begin{lstlisting}[language=scala]
+
+\end{lstlisting}
+
+
 \section{Task}
 \section{Task}
 
-Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem. In enim justo, rhoncus ut, imperdiet a, venenatis vitae, justo. Nullam dictum felis eu pede mollis pretium. Integer tincidunt. Cras dapibus. Vivamus elementum semper nisi. Aliquam lorem ante, dapibus in, viverra quis, feugiat a, tellus:
-\begin{align} 
-	\begin{split}
-	(x+y)^3 	&= (x+y)^2(x+y)\\
-					&=(x^2+2xy+y^2)(x+y)\\
-					&=(x^3+2x^2y+xy^2) + (x^2y+2xy^2+y^3)\\
-					&=x^3+3x^2y+3xy^2+y^3
-	\end{split}					
-\end{align}
-Phasellus viverra nulla ut metus varius laoreet. Quisque rutrum. Aenean imperdiet. Etiam ultricies nisi vel augue. Curabitur ullamcorper ultricies 
 
-\subsection{Heading on level 2 (subsection)}
-Lorem ipsum dolor sit amet, consectetuer adipiscing elit. 
-\begin{align}
-	A = 
-	\begin{bmatrix}
-	A_{11} & A_{21} \\
-  	A_{21} & A_{22}
-	\end{bmatrix}
-\end{align}
-Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem.
-
-\subsubsection{Heading on level 3 (subsubsection)}
-Nulla consequat massa quis enim. Donec pede justo, fringilla vel, aliquet nec, vulputate eget, arcu. In enim justo, rhoncus ut, imperdiet a, venenatis vitae, justo. Nullam dictum felis eu pede mollis pretium. Integer tincidunt. Cras dapibus. Vivamus elementum semper nisi. Aenean vulputate eleifend tellus. Aenean leo ligula, porttitor eu, consequat vitae, eleifend ac, enim.
-
-\paragraph{Heading on level 4 (paragraph)}
-Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem. Nulla consequat massa quis enim. 
-
-
-\section{Lists}
-
-\subsection{Example for list (3*itemize)}
+\section{Scala useful functions}
 \begin{itemize}
-	\item First item in a list 
-		\begin{itemize}
-		\item First item in a list 
-			\begin{itemize}
-			\item First item in a list 
-			\item Second item in a list 
-			\end{itemize}
-		\item Second item in a list 
-		\end{itemize}
-	\item Second item in a list 
-\end{itemize}
+	\item wholeTextFiles - lets you read a directory containing multiple small text files, and returns each of them as (filename, content) pairs. This is in contrast with textFile, which would return one record per line in each file.
+	\item map(func) - return a new distributed dataset formed by passing each element of the source through a function func.  
+	\item flatMapValues -
 
-\subsection{Example for list (enumerate)}
-\begin{enumerate}
-	\item First item in a list 
-	\item Second item in a list 
-	\item Third item in a list
-\end{enumerate}
+		rdd.flatMapValues(x => (x to 5))
+
+		It is applied on an rdd {(1,2),(3,4),(3,6)} and the output of the transformation is {(1,2),(1,3),(1,4),(1,5),(3,4),(3,5)}
+
+		faltMapValues works on each value associated with key. In above case {x to 5} means each value will be incremented till 5.
+
+		Taking first pair where you have {1,2} , here key is 1 and value is 2 so there after applying transformation it will become (1,2),(1,3),(1,4),(1,5).
+	\item mapValues - 
+		\begin{lstlisting}
+		val m = Map( ``a'' -> 2, ``b'' -> 3 )
+
+		// both
+
+		m.mapValues(_ * 5)
+		m.transform( (k,v) => v * 5 )
+		// deliver the same result.
+
+
+		\end{lstlisting}
+	\item filter(func) -  return a new dataset formed by selecting those elements of the source on which func returns true. 
+	\item case -
+		\begin{lstlisting}
+import scala.util.Random
+
+val x: Int = Random.nextInt(10)
+
+x match {
+  case 0 => "zero"
+  case 1 => "one"
+  case 2 => "two"
+  case _ => "many"
+}
+
+
+def matchTest(x: Int): String = x match {
+  case 1 => "one"
+  case 2 => "two"
+  case _ => "many"
+}
+matchTest(3)  // many
+matchTest(1)  // one
+
+
+		\end{lstlisting}
+	\item reduce - aggregate the elements of the dataset using a function func (which takes two arguments and returns one). The function should be commutative and associative so that it can be computed correctly in parallel.  
+	\item reduceByKey - when called on a dataset of (K, V) pairs, returns a dataset of (K, V) pairs where the values for each key are aggregated using the given reduce function func, which must be of type (V,V) => V. Like in groupByKey, the number of reduce tasks is configurable through an optional second argument.  
+	\item Ordering.by - Ordering is a trait whose instances each represent a strategy for sorting instances of a type. Ordering's companion object defines many implicit objects to deal with subtypes of AnyVal (e.g. Int, Double), String, and others. To sort instances by one or more member variables, you can take advantage of these built-in orderings using Ordering.by and Ordering.on:
+		\begin{lstlisting}[language=scala]
+import scala.util.Sorting
+val pairs = Array(( ``a'', 5, 2), (``c'', 3, 1), (``b'', 1, 3))
+
+// sort by 2nd element
+Sorting.quickSort(pairs)(Ordering.by[(String, Int, Int), Int](_._2))
+
+// sort by the 3rd element, then 1st
+Sorting.quickSort(pairs)(Ordering[(Int, String)].on[
+                        (String, Int, Int)](( _._3, _._1)))
+		\end{lstlisting}
+
+	\item fullOuterJoin - 
+	\item join - when called on datasets of type (K, V) and (K, W), returns a dataset of (K, (V, W)) pairs with all pairs of elements for each key. Outer joins are supported through leftOuterJoin, rightOuterJoin, and fullOuterJoin. 
+	\item leftOuterJoin -
+
+		\begin{figure}[!htb]
+			\includegraphics[width=10.5cm]{join-types.png}
+		\end{figure}
+
+	\item getOrElse -  
+	\item math.log - The object Math contains methods for performing basic numeric operations such as the elementary exponential, logarithm, square root, and trigonometric functions.  
+\begin{lstlisting}[language=scala]
+def log (x: Double): Double 
+\end{lstlisting}
+	\item toDouble -
+\begin{lstlisting}[language=scala]
+scala> "100".toDouble
+res1: Double = 100.0
+
+\end{lstlisting}
+	\item toSet -
+\begin{lstlisting}[language=scala]
+scala> val arr = Array("a", "b", "c")
+arr: Array[java.lang.String] = Array(a, b, c)
+
+scala> arr.toSet
+res1: scala.collection.immutable.Set[java.lang.String] = Set(a, b, c)
+\end{lstlisting}
+	\item takeOrdered - return the first n elements of the RDD using either their natural order or a custom comparator.
+	\item foreach - run a function func on each element of the dataset. This is usually done for side effects such as updating an accumulator variable (see below) or interacting with external storage systems. 
+	\item swap -
+		\begin{lstlisting}[language=scala]
+		scala> val pair = (1,2)
+		pair: (Int,Int) = (1,2)
+
+		scala> val swappedPair = pair.swap
+		swappedPair: (Int,Int) = (2,1)
+		\end{lstlisting}
+\end{itemize}
 %%% End document
 \end{document}

@@ -5,10 +5,17 @@ import org.apache.spark.SparkContext._
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
 
+
+/* Spark Context */
+object Spark {
+    val sc = new SparkContext(new SparkConf().setAppName("test").setMaster("local[*]"))
+}
+
 object spamTopWord {
 
   def probaWordDir(sc:SparkContext)(filesDir:String)
   :(RDD[(String, Double)], Long) = {
+
 
 	val rdd = sc.wholeTextFiles(filesDir)
         // The number of files is counted and stored in a variable nbFiles
@@ -23,6 +30,7 @@ object spamTopWord {
     	val wordCountRdd: RDD[(String, Int)] = wordBagRdd.flatMap(x => x._2.map(y => (y, 1))).reduceByKey(_ + _)
     	val probaWord: RDD[(String, Double)] = wordCountRdd.map(x => (x._1, x._2.toDouble / nbFiles))
         return (probaWord, nbFiles)
+
 
   }
 
@@ -40,6 +48,7 @@ object spamTopWord {
   }
 
   def main(args: Array[String]) {
+
   	if(args.size > 0)
 		val conf = new SparkConf().setAppName("Spam Filter Application").setMaster("local")
 		val sc = new SparkContext(conf)
@@ -51,6 +60,7 @@ object spamTopWord {
 		println(nbFiles)
 	else
 		println("Please write te directory where the ham and span")       
+
 
 
   }
