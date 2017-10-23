@@ -53,11 +53,17 @@ object spamTopWord {
 		val conf = new SparkConf().setAppName("Spam Filter Application").setMaster("local")
 		val sc = new SparkContext(conf)
 		println("Got the path:"+args(0))
-		// args(0) should be something like "hdfs:///project/
-		val ff = args(0)+"ham/*.txt"
-		val (probaW, nbFiles) = probaWordDir(sc)(ff)
-		println("number of files in "+ ff +":")
-		println(nbFiles)
+		// args(0) should be something like "hdfs:///project/, see readme
+
+		//process ham files
+		val (probaHW, nbHFiles) = probaWordDir(sc)(args(0)+"ham/*.txt")
+		print("number of files in "+ args(0)+"ham/*.txt" +":")
+		println(nbSFiles)
+
+		//process span files
+		val (probaSW, nbSFiles) = probaWordDir(sc)(args(0)+"span/*.txt")
+		print("number of files in "+ args(0)+"span/*.txt" +":")
+		println(nbSFiles)
 	}
 	else
 		println("Please write te directory where the ham and span")       
