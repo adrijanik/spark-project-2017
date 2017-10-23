@@ -134,24 +134,38 @@ $sbt package
 \section{Task}
 Firstly we created Spark Context with:
 \begin{lstlisting}[language=scala]
-/* Spark Context */
-object Spark {
-    val sc = new SparkContext(new SparkConf().setAppName("test").setMaster("local[*]"))
-}
+val conf = new SparkConf(.setAppName(``Spam Filter Application'').setMaster(``local'')
+val sc = new SparkContext(conf))<++>
 \end{lstlisting}
 Than we called function \textit{probaWordDir} with defined spark context as well as folder name for which we want to count words.
 \begin{lstlisting}[language=scala]
+val (probaHW, nbHFiles) = probaWordDir(sc)(args(0)+"ham/*.txt")
+print("number of files in "+ args(0)+"ham/*.txt" +":")
+println(nbHFiles)
 
-val context = Spark.sc // declaration of Spark context
 
-var probas, numFiles = probaWordDir(context)("hdfs:///tmp/ling-spam/ham/ham/") 
-// call function with context and folder name and save results to probas and 
-// numFiles variable containing as follow probabilities of words 
-// occurances and number of files
+//process spam files
+val (probaSW, nbSFiles) = probaWordDir(sc)(args(0)+"span/*.txt")
+print("number of files in "+ args(0)+"spam/*.txt" +":")
+println(nbSFiles)
 \end{lstlisting}
 \begin{lstlisting}[language=scala]
-eta = sc.wholeTextFiles(filesDir).collect()nd{lstlisting}
-\begin{lstlisting}[language=scala]
+val rdd = sc.wholeTextFiles(filesDir)
+// The number of files is counted and stored in a variable nbFiles
+val nbFiles = rdd.count()
+// Non informative words must be removed from the set of unique words. 
+val stopWords = Set(".", ":", ",", " ", "/", "\\", "-", "'", "(", ")", "@")
+// Each text file must be splitted into a set of unique words 
+//(if a word occurs several times, it is saved only one time in the set).
+val wordBagRdd: RDD[(String, Set[String])] = rdd.map(textTuple =>
+        (textTuple.\_1, textTuple.\_2.trim().
+        split("\\s+").toSet.diff(stopWords)))
+// Get the Number of occurrences amongst all files
+val wordDirOccurency: RDD[(String, Int)] = wordBagRdd.flatMap(
+x => x.\_2.map(y => (y, 1))).reduceByKey(\_ + \_)
+val probaWord: RDD[(String, Double)] = wordDirOccurency.map(
+x => (x.\_1, x.\_2.toDouble / nbFiles))
+return (probaWord, nbFiles)
 
 \end{lstlisting}
 
@@ -179,7 +193,7 @@ eta = sc.wholeTextFiles(filesDir).collect()nd{lstlisting}
 
 		// both
 
-		m.mapValues(_ * 5)
+		m.mapValues(\_ * 5)
 		m.transform( (k,v) => v * 5 )
 		// deliver the same result.
 
@@ -196,14 +210,14 @@ x match {
   case 0 => "zero"
   case 1 => "one"
   case 2 => "two"
-  case _ => "many"
+  case \_ => "many"
 }
 
 
 def matchTest(x: Int): String = x match {
   case 1 => "one"
   case 2 => "two"
-  case _ => "many"
+  case \_ => "many"
 }
 matchTest(3)  // many
 matchTest(1)  // one
@@ -218,11 +232,11 @@ import scala.util.Sorting
 val pairs = Array(( ``a'', 5, 2), (``c'', 3, 1), (``b'', 1, 3))
 
 // sort by 2nd element
-Sorting.quickSort(pairs)(Ordering.by[(String, Int, Int), Int](_._2))
+Sorting.quickSort(pairs)(Ordering.by[(String, Int, Int), Int](\_.\_2))
 
 // sort by the 3rd element, then 1st
 Sorting.quickSort(pairs)(Ordering[(Int, String)].on[
-                        (String, Int, Int)](( _._3, _._1)))
+                        (String, Int, Int)](( \_.\_3, \_.\_1)))
 		\end{lstlisting}
 
 	\item fullOuterJoin - 
