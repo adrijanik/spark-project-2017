@@ -31,7 +31,7 @@ object spamTopWord {
     	val wordBagRdd: RDD[(String, Set[String])] = rdd.map(textTuple => 
 		(textTuple._1, textTuple._2.trim().
 		split("\\s+").toSet.diff(stopWords)))
-    	/
+    	
     	val wordCountRdd: RDD[(String, Int)] = wordBagRdd.flatMap(x => x._2.map(y => (y, 1))).reduceByKey(_ + _)
     	val probaWord: RDD[(String, Double)] = wordCountRdd.map(x => (x._1, x._2.toDouble / nbFiles))
         return (probaWord, nbFiles)
