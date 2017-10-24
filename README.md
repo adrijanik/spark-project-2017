@@ -17,3 +17,9 @@ sbt package
   --master local[4] \
   /root/project/spark-project-2017/spamTopWords/target/scala-2.11/spamtopword_2.11-0.1-SNAPSHOT.jar hdfs:///project/
 ```
+
+### to see the result: the /tmp/topWords.txt is a folder in hdfs
+```
+hdfs dfs -ls /tmp/topWords.txt
+hdfs dfs -cat /tmp/topWords.txt/
+```
