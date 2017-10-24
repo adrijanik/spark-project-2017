@@ -5,6 +5,14 @@ import org.apache.spark.SparkContext._
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
 
+//not to see logs
+import org.apache.log4j.Logger
+import org.apache.log4j.Level
+
+Logger.getLogger("org").setLevel(Level.OFF)
+Logger.getLogger("akka").setLevel(Level.OFF)
+
+
 
 /* Spark Context */
 object Spark {
@@ -18,15 +26,13 @@ object spamTopWord {
 
 
 	val rdd = sc.wholeTextFiles(filesDir)
-        // The number of files is counted and stored in a variable nbFiles
         val nbFiles = rdd.count()
-        // Non informative words must be removed from the set of unique words. We have also added ! and ?
     	val stopWords = Set(".", ":", ",", " ", "/", "\\", "-", "'", "(", ")", "@")
-    	// Each text file must be splitted into a set of unique words (if a word occurs several times, it is saved only one time in the set).
+    	
     	val wordBagRdd: RDD[(String, Set[String])] = rdd.map(textTuple => 
 		(textTuple._1, textTuple._2.trim().
 		split("\\s+").toSet.diff(stopWords)))
-    	// Get the Number of occurrences amongst all files
+    	/
     	val wordCountRdd: RDD[(String, Int)] = wordBagRdd.flatMap(x => x._2.map(y => (y, 1))).reduceByKey(_ + _)
     	val probaWord: RDD[(String, Double)] = wordCountRdd.map(x => (x._1, x._2.toDouble / nbFiles))
         return (probaWord, nbFiles)
@@ -45,7 +51,7 @@ object spamTopWord {
 	    val probWJoin: RDD[(String, (Double, Option[Double]))] = probaW.leftOuterJoin(probaWC)// got all class probs, if not -> default
 				//p(accurs)  p(accurs,class) 
 	    val valueClassAndOcu: RDD[(String, (Double, Double))] = probWJoin.map(x => (x._1, (x._2._1, x._2._2.getOrElse(probaDefault))))
-	    //We have to change ln to log2 (by using ln(x)/ln(2)=log2(x)
+	   
 	    valueClassAndOcu.map(x => (x._1, x._2._2 * (math.log(x._2._2 / (x._2._1 * probaC)) / math.log(2.0))))
   }
 
@@ -64,31 +70,34 @@ object spamTopWord {
 		val (probaSW, nbSFiles) = probaWordDir(sc)(args(0)+"span/*.txt")
 		print("number of files in "+ args(0)+"ham/*.txt" +":")
 		println(nbHFiles)
+		probaHW.foreach{ println }
 		print("number of files in "+ args(0)+"span/*.txt" +":")
 		println(nbSFiles)
+		probaSW.foreach{ println }
 
 		val nbFiles = nbSFiles + nbHFiles
-		val probaW = probaSW.union(probaHW).reduceByKey((x,y) => (x*nbSFiles.toDouble+y*nbSFiles.toDouble)/(nbFiles.toDouble)) //not sure
+		//a trick to multiply the correct probability
+		val probaWs = probaSW.map(x => (x._1,(x._2,1))).union(probaHW.map(x => (x._1,(x._2,0))))
+		val probaW = probaWs.reduceByKey((x,y) => if(y._2<1) ((x._1*nbSFiles.toDouble+y._1*nbHFiles.toDouble)/(nbFiles.toDouble),1) else ((y._1*nbSFiles.toDouble+x._1*nbHFiles.toDouble)/(nbFiles.toDouble) ,0)) .map(x => (x._1,x._2._1))
 
 	        //Compute the probability P(occurs, class) for each word.
 
-		val probaH = nbHFiles.toDouble / nbFiles.toDouble // the probability that an email belongs to the given class.
+		val probaH = nbHFiles.toDouble / nbFiles.toDouble 
 		val probaS = nbSFiles.toDouble / nbFiles.toDouble
-		// Compute mutual information for each class and occurs
+
 		val MITrueHam = computeMutualInformationFactor(probaHW, probaW, probaH, 0.2 / nbFiles) // the last is a default value
 		val MITrueSpam = computeMutualInformationFactor(probaSW, probaW, probaS, 0.2 / nbFiles)
 		val MIFalseHam = computeMutualInformationFactor(probaHW.map(x => (x._1, 1 - x._2)), probaW, probaH, 0.2 / nbFiles)
 		val MIFalseSpam = computeMutualInformationFactor(probaSW.map(x => (x._1, 1 - x._2)), probaW, probaS, 0.2 / nbFiles)
 
-		//compute the mutual information of each word as a RDD with the map structure: word => MI(word)
-		//sum the prob for all words
+		
 		val MI :RDD[(String, Double)] = MITrueHam.union(MITrueSpam).union(MIFalseHam).union(MIFalseSpam).reduceByKey( (x, y) => x + y)
 
-		// print on screen the 10 top words (maximizing the mutual information value)
-		//These words must be also stored on HDFS in the file “/tmp/topWords.txt”.
 	        val path: String = "/tmp/topWords.txt"
 		val topTenWords: Array[(String, Double)] = MI.top(10)(Ordering[Double].on(x => x._2))
-		//coalesce to put the results in a single file
+
+		//debug
+		topTenwords.foreach{ println }
 		sc.parallelize(topTenWords).keys.coalesce(1, true).saveAsTextFile(path)
 	}
 	else
