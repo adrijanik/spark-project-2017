@@ -9,8 +9,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.log4j.Logger
 import org.apache.log4j.Level
 
-Logger.getLogger("org").setLevel(Level.OFF)
-Logger.getLogger("akka").setLevel(Level.OFF)
+
 
 
 
@@ -56,6 +55,8 @@ object spamTopWord {
   }
 
   def main(args: Array[String]) {
+	Logger.getLogger("org").setLevel(Level.OFF)
+	Logger.getLogger("akka").setLevel(Level.OFF)
 
   	if(args.size > 0){
 		val conf = new SparkConf().setAppName("Spam Filter Application").setMaster("local")
@@ -97,7 +98,7 @@ object spamTopWord {
 		val topTenWords: Array[(String, Double)] = MI.top(10)(Ordering[Double].on(x => x._2))
 
 		//debug
-		topTenwords.foreach{ println }
+		topTenWords.foreach{ println }
 		sc.parallelize(topTenWords).keys.coalesce(1, true).saveAsTextFile(path)
 	}
 	else
