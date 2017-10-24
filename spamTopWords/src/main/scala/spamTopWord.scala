@@ -28,7 +28,7 @@ object spamTopWord {
 	//get the number of files
         val nbFiles = rdd.count()
 
-    	val stopWords = Set(".", ":", ",", " ", "/", "\\", "-", "'", "(", ")", "@","Subject")
+    	val stopWords = Set(".", ":", ",", " ", "/", "\\", "-", "'", "(", ")", "@","Subject:")
 	// get the words in an email, delete the dublicate in one email, delete the stop words    	
     	val wordBagRdd: RDD[(String, Set[String])] = rdd.map(textTuple => 
 		(textTuple._1, textTuple._2.trim().
@@ -100,13 +100,13 @@ object spamTopWord {
 		val MIFalseHam = computeMutualInformationFactor(probaHW.map(x => (x._1, 1.00001 - x._2)), probaW, probaH, 0.2 / nbFiles)
 		val MIFalseSpam = computeMutualInformationFactor(probaSW.map(x => (x._1, 1.00001 - x._2)), probaW, probaS, 0.2 / nbFiles)
 
-		println("print MIFalseSpam words:")
+		println("print top MIFalseSpam prob:")
 		MIFalseSpam.top(10)(Ordering[Double].on(x => x._2)).foreach{ println }
-		println("print MIFalseHam words:")
+		println("print top MIFalseHam prob:")
 		MIFalseHam.top(10)(Ordering[Double].on(x => x._2)).foreach{ println }
-		println("print MITrueSpam words:")
+		println("print top MITrueSpam prob:")
 		MITrueSpam.top(10)(Ordering[Double].on(x => x._2)).foreach{ println }
-		println("print MITrueHam words:")
+		println("print top MITrueHam prob:")
 		MITrueHam.top(10)(Ordering[Double].on(x => x._2)).foreach{ println }
 
 		//sum the mutual information 
@@ -117,7 +117,7 @@ object spamTopWord {
 		val topTenWords: Array[(String, Double)] = MI.top(20)(Ordering[Double].on(x => x._2))
 
 		//debug
-		println("print 20 words:")
+		println("print top 20 words:")
 		topTenWords.foreach{ println }
 		sc.parallelize(topTenWords).keys.coalesce(1, true).saveAsTextFile(path)
 	}
