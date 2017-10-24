@@ -28,7 +28,7 @@ object spamTopWord {
 	//get the number of files
         val nbFiles = rdd.count()
 
-    	val stopWords = Set(".", ":", ",", " ", "/", "\\", "-", "'", "(", ")", "@")
+    	val stopWords = Set(".", ":", ",", " ", "/", "\\", "-", "'", "(", ")", "@","Subject")
 	// get the words in an email, delete the dublicate in one email, delete the stop words    	
     	val wordBagRdd: RDD[(String, Set[String])] = rdd.map(textTuple => 
 		(textTuple._1, textTuple._2.trim().
@@ -97,15 +97,24 @@ object spamTopWord {
 		//compute the mutual information : 1.000001 is for Subject, it is on all email, could just put in the stop words
 		val MITrueHam = computeMutualInformationFactor(probaHW, probaW, probaH, 0.2 / nbFiles) // the last is a default value
 		val MITrueSpam = computeMutualInformationFactor(probaSW, probaW, probaS, 0.2 / nbFiles)
-		val MIFalseHam = computeMutualInformationFactor(probaHW.map(x => (x._1, 1 - x._2)), probaW, probaH, 0.2 / nbFiles)
-		val MIFalseSpam = computeMutualInformationFactor(probaSW.map(x => (x._1, 1 - x._2)), probaW, probaS, 0.2 / nbFiles)
+		val MIFalseHam = computeMutualInformationFactor(probaHW.map(x => (x._1, 1.00001 - x._2)), probaW, probaH, 0.2 / nbFiles)
+		val MIFalseSpam = computeMutualInformationFactor(probaSW.map(x => (x._1, 1.00001 - x._2)), probaW, probaS, 0.2 / nbFiles)
+
+		println("print MIFalseSpam words:")
+		MIFalseSpam.top(10)(Ordering[Double].on(x => x._2)).foreach{ println }
+		println("print MIFalseHam words:")
+		MIFalseHam.top(10)(Ordering[Double].on(x => x._2)).foreach{ println }
+		println("print MITrueSpam words:")
+		MITrueSpam.top(10)(Ordering[Double].on(x => x._2)).foreach{ println }
+		println("print MITrueHam words:")
+		MITrueHam.top(10)(Ordering[Double].on(x => x._2)).foreach{ println }
 
 		//sum the mutual information 
-		val MI :RDD[(String, Double)] = MITrueHam.union(MITrueSpam).union(MIFalseHam).union(MIFalseSpam).reduceByKey(_ + _)
+		val MI :RDD[(String, Double)] = MITrueHam.union(MITrueSpam).union(MIFalseHam).union(MIFalseSpam).reduceByKey((x,y)=>(x+y))
 
 		//save the top 20 words
 	        val path: String = "/tmp/topWords.txt"
-		val topTenWords: Array[(String, Double)] = MI.top(20)(Ordering[Double].on(_._2))
+		val topTenWords: Array[(String, Double)] = MI.top(20)(Ordering[Double].on(x => x._2))
 
 		//debug
 		println("print 20 words:")
