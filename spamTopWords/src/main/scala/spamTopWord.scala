@@ -71,10 +71,10 @@ object spamTopWord {
 		val (probaSW, nbSFiles) = probaWordDir(sc)(args(0)+"span/*.txt")
 		print("number of files in "+ args(0)+"ham/*.txt" +":")
 		println(nbHFiles)
-		probaHW.foreach{ println }
+		probaHW.top(10)(Ordering[Double].on(x => x._2)).foreach{ println }
 		print("number of files in "+ args(0)+"span/*.txt" +":")
 		println(nbSFiles)
-		probaSW.foreach{ println }
+		probaSW.top(10)(Ordering[Double].on(x => x._2)).foreach{ println }
 
 		val nbFiles = nbSFiles + nbHFiles
 		//a trick to multiply the correct probability
@@ -98,6 +98,7 @@ object spamTopWord {
 		val topTenWords: Array[(String, Double)] = MI.top(10)(Ordering[Double].on(x => x._2))
 
 		//debug
+		println("print 10 words:")
 		topTenWords.foreach{ println }
 		sc.parallelize(topTenWords).keys.coalesce(1, true).saveAsTextFile(path)
 	}
