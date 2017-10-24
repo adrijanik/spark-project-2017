@@ -84,6 +84,37 @@ Lei Guo \\ \normalsize
 
 %%% Begin document
 \usepackage{listings}
+
+\usepackage{xcolor}
+\definecolor{commentgreen}{RGB}{2,112,10}
+\definecolor{eminence}{RGB}{108,48,130}
+\definecolor{weborange}{RGB}{255,165,0}
+\definecolor{frenchplum}{RGB}{129,20,83}
+
+\usepackage{listings}
+\lstset {
+    language=scala,
+    frame=tb,
+    tabsize=4,
+    showstringspaces=false,
+    numbers=left,
+    %upquote=true,
+    commentstyle=\color{commentgreen},
+    keywordstyle=\color{eminence},
+    stringstyle=\color{red},
+    basicstyle=\small\ttfamily, % basic font setting
+    emph={int,char,double,float,unsigned,void,bool},
+    emphstyle={\color{blue}},
+    escapechar=\&,
+    % keyword highlighting
+    classoffset=1, % starting new class
+    otherkeywords={>,<,.,;,-,!,=,~},
+    morekeywords={>,<,.,;,-,!,=,~},
+    keywordstyle=\color{weborange},
+    classoffset=0,
+    breaklines=true,
+    postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space},
+}
 \begin{document}
 \maketitle
 \section{Task}
@@ -135,7 +166,7 @@ $sbt package
 Firstly we created Spark Context with:
 \begin{lstlisting}[language=scala]
 val conf = new SparkConf(.setAppName(``Spam Filter Application'').setMaster(``local'')
-val sc = new SparkContext(conf))<++>
+val sc = new SparkContext(conf))
 \end{lstlisting}
 Than we called function \textit{probaWordDir} with defined spark context as well as folder name for which we want to count words.
 \begin{lstlisting}[language=scala]
@@ -145,7 +176,7 @@ println(nbHFiles)
 
 
 //process spam files
-val (probaSW, nbSFiles) = probaWordDir(sc)(args(0)+"span/*.txt")
+val (probaSW, nbSFiles) = probaWordDir(sc)(args(0)+"spam/*.txt")
 print("number of files in "+ args(0)+"spam/*.txt" +":")
 println(nbSFiles)
 \end{lstlisting}
@@ -158,124 +189,211 @@ val stopWords = Set(".", ":", ",", " ", "/", "\\", "-", "'", "(", ")", "@")
 // Each text file must be splitted into a set of unique words 
 //(if a word occurs several times, it is saved only one time in the set).
 val wordBagRdd: RDD[(String, Set[String])] = rdd.map(textTuple =>
-        (textTuple.\_1, textTuple.\_2.trim().
+        (textTuple._1, textTuple._2.trim().
         split("\\s+").toSet.diff(stopWords)))
 // Get the Number of occurrences amongst all files
 val wordDirOccurency: RDD[(String, Int)] = wordBagRdd.flatMap(
-x => x.\_2.map(y => (y, 1))).reduceByKey(\_ + \_)
+x => x._2.map(y => (y, 1))).reduceByKey(_ + _)
 val probaWord: RDD[(String, Double)] = wordDirOccurency.map(
-x => (x.\_1, x.\_2.toDouble / nbFiles))
+x => (x._1, x._2.toDouble / nbFiles))
 return (probaWord, nbFiles)
 
 \end{lstlisting}
+\section{,5 Tasks}
+
+Function: probaWordDir:
+\begin{lstlisting}
+def probaWordDir(sc:SparkContext)(filesDir:String)
+:(RDD[(String, Double)], Long) = {
 
 
-\section{Task}
-\section{Task}
+      val rdd = sc.wholeTextFiles(filesDir)
+      // The number of files is counted and stored in a variable nbFiles
+      val nbFiles = rdd.count()
+      // Non informative words must be removed from the set of unique words.
+      val stopWords = Set(".", ":", ",", " ", "/", "\\", "-", "'", "(", ")", "@")
+      // Each text file must be splitted into a set of unique words (if a word occurs several times, it is saved only one time in the set).
+      val wordBagRdd: RDD[(String, Set[String])] = rdd.map(textTuple =>
+              (textTuple._1, textTuple._2.trim().
+              split("\\s+").toSet.diff(stopWords)))
+      // Get the Number of occurrences amongst all files
+      val wordCountRdd: RDD[(String, Int)] = wordBagRdd.flatMap(x => x._2.map(y => (y, 1))).reduceByKey(_ +_)
+      val probaWord: RDD[(String, Double)] = wordCountRdd.map(x => (x._1, x._2.toDouble / nbFiles))
+      return (probaWord, nbFiles)
 
 
-\section{Scala useful functions}
-\begin{itemize}
-	\item wholeTextFiles - lets you read a directory containing multiple small text files, and returns each of them as (filename, content) pairs. This is in contrast with textFile, which would return one record per line in each file.
-	\item map(func) - return a new distributed dataset formed by passing each element of the source through a function func.  
-	\item flatMapValues -
+}
+\end{lstlisting}
+Main function:
+\begin{lstlisting}
+def main(args: Array[String]) {
 
-		rdd.flatMapValues(x => (x to 5))
+      if(args.size > 0){
+              val conf = new SparkConf().setAppName("Spam Filter Application").setMaster("local")
+              val sc = new SparkContext(conf)
+              println("Got the path:"+args(0))
+              // args(0) should be something like "hdfs:///project/, see readme
 
-		It is applied on an rdd {(1,2),(3,4),(3,6)} and the output of the transformation is {(1,2),(1,3),(1,4),(1,5),(3,4),(3,5)}
+              //process ham files
+              val (probaHW, nbHFiles) = probaWordDir(sc)(args(0)+"ham/*.txt")
 
-		faltMapValues works on each value associated with key. In above case {x to 5} means each value will be incremented till 5.
+              //process spam files
+              val (probaSW, nbSFiles) = probaWordDir(sc)(args(0)+"spam/*.txt")
+              print("number of files in "+ args(0)+"ham/*.txt" +":")
+              println(nbHFiles)
+              print("number of files in "+ args(0)+"spam/*.txt" +":")
+              println(nbSFiles)
 
-		Taking first pair where you have {1,2} , here key is 1 and value is 2 so there after applying transformation it will become (1,2),(1,3),(1,4),(1,5).
-	\item mapValues - 
-		\begin{lstlisting}
-		val m = Map( ``a'' -> 2, ``b'' -> 3 )
+              val nbFiles = nbSFiles + nbHFiles
+              val probaW = probaSW.union(probaHW).reduceByKey((x,y) => (x*nbSFiles.toDouble+y*nbSFiles.toDouble)/(nbFiles.toDouble)) //not sure
 
-		// both
+              //Compute the probability P(occurs, class) for each word.
 
-		m.mapValues(\_ * 5)
-		m.transform( (k,v) => v * 5 )
-		// deliver the same result.
+              val probaH = nbHFiles.toDouble / nbFiles.toDouble // the probability that an email belongs to the given class.
+              val probaS = nbSFiles.toDouble / nbFiles.toDouble
+              // Compute mutual information for each class and occurs
+              val MITrueHam = computeMutualInformationFactor(probaHW, probaW, probaH, 0.2 / nbFiles) // the last is a default value
+              val MITrueSpam = computeMutualInformationFactor(probaSW, probaW, probaS, 0.2 / nbFiles)
+              val MIFalseHam = computeMutualInformationFactor(probaHW.map(x => (x._1, 1 - x._2)), probaW, probaH, 0.2 / nbFiles)
+              val MIFalseSpam = computeMutualInformationFactor(probaSW.map(x => (x._1, 1 - x._2)), probaW, probaS, 0.2 / nbFiles)
 
+              //compute the mutual information of each word as a RDD with the map structure: word => MI(word)
+              //sum the prob for all words
+              val MI :RDD[(String, Double)] = MITrueHam.union(MITrueSpam).union(MIFalseHam).union(MIFalseSpam).reduceByKey( (x, y) => x + y)
 
-		\end{lstlisting}
-	\item filter(func) -  return a new dataset formed by selecting those elements of the source on which func returns true. 
-	\item case -
-		\begin{lstlisting}
-import scala.util.Random
-
-val x: Int = Random.nextInt(10)
-
-x match {
-  case 0 => "zero"
-  case 1 => "one"
-  case 2 => "two"
-  case \_ => "many"
+              // print on screen the 10 top words (maximizing the mutual information value)
+              //These words must be also stored on HDFS in the file “/tmp/topWords.txt”.
+              val path: String = "/tmp/topWords.txt"
+              val topTenWords: Array[(String, Double)] = MI.top(10)(Ordering[Double].on(x => x._2))
+              //coalesce to put the results in a single file
+              sc.parallelize(topTenWords).keys.coalesce(1, true).saveAsTextFile(path)
+      }
+      else
+              println("Please write te directory where the ham and spam")
 }
 
+\end{lstlisting}
 
-def matchTest(x: Int): String = x match {
-  case 1 => "one"
-  case 2 => "two"
-  case \_ => "many"
+Function: computeMutualInformationFactor
+\begin{lstlisting}
+def computeMutualInformationFactor(
+  probaWC: RDD[(String, Double)],//prob of just a class, some word could not be 
+  probaW: RDD[(String, Double)],//all words prob, all word
+  probaC: Double, //prb of a class : class mails / all mails
+  probaDefault: Double // default value when a probability is missing
+): RDD[(String, Double)] = {
+          //p(occurs) = 
+          val probWJoin: RDD[(String, (Double, Option[Double]))] = probaW.leftOuterJoin(probaWC)// got all class probs, if not -> default
+                              //p(accurs)  p(accurs,class) 
+          val valueClassAndOcu: RDD[(String, (Double, Double))] = probWJoin.map(x => (x._1, (x._2._1, x._2._2.getOrElse(probaDefault))))
+          //We have to change ln to log2 (by using ln(x)/ln(2)=log2(x)
+          valueClassAndOcu.map(x => (x._1, x._2._2 * (math.log(x._2._2 / (x._2._1 * probaC)) / math.log(2.0))))
+
 }
-matchTest(3)  // many
-matchTest(1)  // one
-
-
-		\end{lstlisting}
-	\item reduce - aggregate the elements of the dataset using a function func (which takes two arguments and returns one). The function should be commutative and associative so that it can be computed correctly in parallel.  
-	\item reduceByKey - when called on a dataset of (K, V) pairs, returns a dataset of (K, V) pairs where the values for each key are aggregated using the given reduce function func, which must be of type (V,V) => V. Like in groupByKey, the number of reduce tasks is configurable through an optional second argument.  
-	\item Ordering.by - Ordering is a trait whose instances each represent a strategy for sorting instances of a type. Ordering's companion object defines many implicit objects to deal with subtypes of AnyVal (e.g. Int, Double), String, and others. To sort instances by one or more member variables, you can take advantage of these built-in orderings using Ordering.by and Ordering.on:
-		\begin{lstlisting}[language=scala]
-import scala.util.Sorting
-val pairs = Array(( ``a'', 5, 2), (``c'', 3, 1), (``b'', 1, 3))
-
-// sort by 2nd element
-Sorting.quickSort(pairs)(Ordering.by[(String, Int, Int), Int](\_.\_2))
-
-// sort by the 3rd element, then 1st
-Sorting.quickSort(pairs)(Ordering[(Int, String)].on[
-                        (String, Int, Int)](( \_.\_3, \_.\_1)))
-		\end{lstlisting}
-
-	\item fullOuterJoin - 
-	\item join - when called on datasets of type (K, V) and (K, W), returns a dataset of (K, (V, W)) pairs with all pairs of elements for each key. Outer joins are supported through leftOuterJoin, rightOuterJoin, and fullOuterJoin. 
-	\item leftOuterJoin -
-
-		\begin{figure}[!htb]
-			\includegraphics[width=10.5cm]{join-types.png}
-		\end{figure}
-
-	\item getOrElse -  
-	\item math.log - The object Math contains methods for performing basic numeric operations such as the elementary exponential, logarithm, square root, and trigonometric functions.  
-\begin{lstlisting}[language=scala]
-def log (x: Double): Double 
 \end{lstlisting}
-	\item toDouble -
-\begin{lstlisting}[language=scala]
-scala> "100".toDouble
-res1: Double = 100.0
 
-\end{lstlisting}
-	\item toSet -
-\begin{lstlisting}[language=scala]
-scala> val arr = Array("a", "b", "c")
-arr: Array[java.lang.String] = Array(a, b, c)
-
-scala> arr.toSet
-res1: scala.collection.immutable.Set[java.lang.String] = Set(a, b, c)
-\end{lstlisting}
-	\item takeOrdered - return the first n elements of the RDD using either their natural order or a custom comparator.
-	\item foreach - run a function func on each element of the dataset. This is usually done for side effects such as updating an accumulator variable (see below) or interacting with external storage systems. 
-	\item swap -
-		\begin{lstlisting}[language=scala]
-		scala> val pair = (1,2)
-		pair: (Int,Int) = (1,2)
-
-		scala> val swappedPair = pair.swap
-		swappedPair: (Int,Int) = (2,1)
-		\end{lstlisting}
-\end{itemize}
-%%% End document
+%\section{Scala useful functions}
+%\begin{itemize}
+%	\item wholeTextFiles - lets you read a directory containing multiple small text files, and returns each of them as (filename, content) pairs. This is in contrast with textFile, which would return one record per line in each file.
+%	\item map(func) - return a new distributed dataset formed by passing each element of the source through a function func.  
+%	\item flatMapValues -
+%
+%		rdd.flatMapValues(x => (x to 5))
+%
+%		It is applied on an rdd {(1,2),(3,4),(3,6)} and the output of the transformation is {(1,2),(1,3),(1,4),(1,5),(3,4),(3,5)}
+%
+%		faltMapValues works on each value associated with key. In above case {x to 5} means each value will be incremented till 5.
+%
+%		Taking first pair where you have {1,2} , here key is 1 and value is 2 so there after applying transformation it will become (1,2),(1,3),(1,4),(1,5).
+%	\item mapValues - 
+%		\begin{lstlisting}
+%		val m = Map( ``a'' -> 2, ``b'' -> 3 )
+%
+%		// both
+%
+%		m.mapValues(_ * 5)
+%		m.transform( (k,v) => v * 5 )
+%		// deliver the same result.
+%
+%
+%		\end{lstlisting}
+%	\item filter(func) -  return a new dataset formed by selecting those elements of the source on which func returns true. 
+%	\item case -
+%		\begin{lstlisting}
+%import scala.util.Random
+%
+%val x: Int = Random.nextInt(10)
+%
+%x match {
+%  case 0 => "zero"
+%  case 1 => "one"
+%  case 2 => "two"
+%  case _ => "many"
+%}
+%
+%
+%def matchTest(x: Int): String = x match {
+%  case 1 => "one"
+%  case 2 => "two"
+%  case _ => "many"
+%}
+%matchTest(3)  // many
+%matchTest(1)  // one
+%
+%
+%		\end{lstlisting}
+%	\item reduce - aggregate the elements of the dataset using a function func (which takes two arguments and returns one). The function should be commutative and associative so that it can be computed correctly in parallel.  
+%	\item reduceByKey - when called on a dataset of (K, V) pairs, returns a dataset of (K, V) pairs where the values for each key are aggregated using the given reduce function func, which must be of type (V,V) => V. Like in groupByKey, the number of reduce tasks is configurable through an optional second argument.  
+%	\item Ordering.by - Ordering is a trait whose instances each represent a strategy for sorting instances of a type. Ordering's companion object defines many implicit objects to deal with subtypes of AnyVal (e.g. Int, Double), String, and others. To sort instances by one or more member variables, you can take advantage of these built-in orderings using Ordering.by and Ordering.on:
+%		\begin{lstlisting}[language=scala]
+%import scala.util.Sorting
+%val pairs = Array(( ``a'', 5, 2), (``c'', 3, 1), (``b'', 1, 3))
+%
+%// sort by 2nd element
+%Sorting.quickSort(pairs)(Ordering.by[(String, Int, Int), Int](_._2))
+%
+%// sort by the 3rd element, then 1st
+%Sorting.quickSort(pairs)(Ordering[(Int, String)].on[
+%                        (String, Int, Int)](( _._3, _._1)))
+%		\end{lstlisting}
+%
+%	\item fullOuterJoin - 
+%	\item join - when called on datasets of type (K, V) and (K, W), returns a dataset of (K, (V, W)) pairs with all pairs of elements for each key. Outer joins are supported through leftOuterJoin, rightOuterJoin, and fullOuterJoin. 
+%	\item leftOuterJoin -
+%
+%		\begin{figure}[!htb]
+%			\includegraphics[width=10.5cm]{join-types.png}
+%		\end{figure}
+%
+%	\item getOrElse -  
+%	\item math.log - The object Math contains methods for performing basic numeric operations such as the elementary exponential, logarithm, square root, and trigonometric functions.  
+%\begin{lstlisting}[language=scala]
+%def log (x: Double): Double 
+%\end{lstlisting}
+%	\item toDouble -
+%\begin{lstlisting}[language=scala]
+%scala> "100".toDouble
+%res1: Double = 100.0
+%
+%\end{lstlisting}
+%	\item toSet -
+%\begin{lstlisting}[language=scala]
+%scala> val arr = Array("a", "b", "c")
+%arr: Array[java.lang.String] = Array(a, b, c)
+%
+%scala> arr.toSet
+%res1: scala.collection.immutable.Set[java.lang.String] = Set(a, b, c)
+%\end{lstlisting}
+%	\item takeOrdered - return the first n elements of the RDD using either their natural order or a custom comparator.
+%	\item foreach - run a function func on each element of the dataset. This is usually done for side effects such as updating an accumulator variable (see below) or interacting with external storage systems. 
+%	\item swap -
+%		\begin{lstlisting}[language=scala]
+%		scala> val pair = (1,2)
+%		pair: (Int,Int) = (1,2)
+%
+%		scala> val swappedPair = pair.swap
+%		swappedPair: (Int,Int) = (2,1)
+%		\end{lstlisting}
+%\end{itemize}
+%%%% End document
 \end{document}
