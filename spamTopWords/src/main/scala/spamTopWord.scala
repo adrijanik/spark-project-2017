@@ -97,8 +97,8 @@ object spamTopWord {
 		//compute the mutual information : 1.000001 is for Subject, it is on all email, could just put in the stop words
 		val MITrueHam = computeMutualInformationFactor(probaHW, probaW, probaH, 0.2 / nbFiles) // the last is a default value
 		val MITrueSpam = computeMutualInformationFactor(probaSW, probaW, probaS, 0.2 / nbFiles)
-		val MIFalseHam = computeMutualInformationFactor(probaHW.map((_._1, 1.00000001 - _._2)), probaW, probaH, 0.2 / nbFiles)
-		val MIFalseSpam = computeMutualInformationFactor(probaSW.map((_._1, 1.000000001 - _._2)), probaW, probaS, 0.2 / nbFiles)
+		val MIFalseHam = computeMutualInformationFactor(probaHW.map(x => (x._1, 1 - x._2)), probaW, probaH, 0.2 / nbFiles)
+		val MIFalseSpam = computeMutualInformationFactor(probaSW.map(x => (x._1, 1 - x._2)), probaW, probaS, 0.2 / nbFiles)
 
 		//sum the mutual information 
 		val MI :RDD[(String, Double)] = MITrueHam.union(MITrueSpam).union(MIFalseHam).union(MIFalseSpam).reduceByKey(_ + _)
