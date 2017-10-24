@@ -42,7 +42,12 @@
 \usepackage{sectsty}
 \allsectionsfont{\centering \normalfont\scshape}
 
+\usepackage{enumitem}
 
+% if you want to create a new list from scratch
+\newlist{alphalist}{enumerate}{1}
+% in that case, at least label must be specified using \setlist
+\setlist[alphalist,1]{label=\textbf{\alph*.}}
 %%% Custom headers/footers (fancyhdr package)
 \usepackage{fancyhdr}
 \pagestyle{fancyplain}
@@ -180,101 +185,43 @@ val (probaSW, nbSFiles) = probaWordDir(sc)(args(0)+"spam/*.txt")
 print("number of files in "+ args(0)+"spam/*.txt" +":")
 println(nbSFiles)
 \end{lstlisting}
-\begin{lstlisting}[language=scala]
-val rdd = sc.wholeTextFiles(filesDir)
-// The number of files is counted and stored in a variable nbFiles
-val nbFiles = rdd.count()
-// Non informative words must be removed from the set of unique words. 
-val stopWords = Set(".", ":", ",", " ", "/", "\\", "-", "'", "(", ")", "@")
-// Each text file must be splitted into a set of unique words 
-//(if a word occurs several times, it is saved only one time in the set).
-val wordBagRdd: RDD[(String, Set[String])] = rdd.map(textTuple =>
-        (textTuple._1, textTuple._2.trim().
-        split("\\s+").toSet.diff(stopWords)))
-// Get the Number of occurrences amongst all files
-val wordDirOccurency: RDD[(String, Int)] = wordBagRdd.flatMap(
-x => x._2.map(y => (y, 1))).reduceByKey(_ + _)
-val probaWord: RDD[(String, Double)] = wordDirOccurency.map(
-x => (x._1, x._2.toDouble / nbFiles))
-return (probaWord, nbFiles)
-
-\end{lstlisting}
-\section{,5 Tasks}
 
 Function: probaWordDir:
 \begin{lstlisting}
 def probaWordDir(sc:SparkContext)(filesDir:String)
 :(RDD[(String, Double)], Long) = {
 
+      //sc -> class org.apache.spark.SparkContext
+      //filesDir -> java.lang.String
 
       val rdd = sc.wholeTextFiles(filesDir)
+      //rdd -> class org.apache.spark.rdd.MapPartitionsRDD
       // The number of files is counted and stored in a variable nbFiles
       val nbFiles = rdd.count()
+      //nbFiles -> long
       // Non informative words must be removed from the set of unique words.
       val stopWords = Set(".", ":", ",", " ", "/", "\\", "-", "'", "(", ")", "@")
+      //stopWords -> class scala.collection.immutable.HashSet\$HashTrieSet
       // Each text file must be splitted into a set of unique words (if a word occurs several times, it is saved only one time in the set).
       val wordBagRdd: RDD[(String, Set[String])] = rdd.map(textTuple =>
               (textTuple._1, textTuple._2.trim().
               split("\\s+").toSet.diff(stopWords)))
+      //wordBagRdd -> class org.apache.spark.rdd.MapPartitionsRDD
       // Get the Number of occurrences amongst all files
       val wordCountRdd: RDD[(String, Int)] = wordBagRdd.flatMap(x => x._2.map(y => (y, 1))).reduceByKey(_ +_)
+      //wordCountRdd -> class org.apache.spark.rdd.ShuffledRDD
       val probaWord: RDD[(String, Double)] = wordCountRdd.map(x => (x._1, x._2.toDouble / nbFiles))
+      //probaWord -> class org.apache.spark.rdd.MapPartitionsRDD
       return (probaWord, nbFiles)
 
 
 }
 \end{lstlisting}
-Main function:
-\begin{lstlisting}
-def main(args: Array[String]) {
 
-      if(args.size > 0){
-              val conf = new SparkConf().setAppName("Spam Filter Application").setMaster("local")
-              val sc = new SparkContext(conf)
-              println("Got the path:"+args(0))
-              // args(0) should be something like "hdfs:///project/, see readme
 
-              //process ham files
-              val (probaHW, nbHFiles) = probaWordDir(sc)(args(0)+"ham/*.txt")
-
-              //process spam files
-              val (probaSW, nbSFiles) = probaWordDir(sc)(args(0)+"spam/*.txt")
-              print("number of files in "+ args(0)+"ham/*.txt" +":")
-              println(nbHFiles)
-              print("number of files in "+ args(0)+"spam/*.txt" +":")
-              println(nbSFiles)
-
-              val nbFiles = nbSFiles + nbHFiles
-              val probaW = probaSW.union(probaHW).reduceByKey((x,y) => (x*nbSFiles.toDouble+y*nbSFiles.toDouble)/(nbFiles.toDouble)) //not sure
-
-              //Compute the probability P(occurs, class) for each word.
-
-              val probaH = nbHFiles.toDouble / nbFiles.toDouble // the probability that an email belongs to the given class.
-              val probaS = nbSFiles.toDouble / nbFiles.toDouble
-              // Compute mutual information for each class and occurs
-              val MITrueHam = computeMutualInformationFactor(probaHW, probaW, probaH, 0.2 / nbFiles) // the last is a default value
-              val MITrueSpam = computeMutualInformationFactor(probaSW, probaW, probaS, 0.2 / nbFiles)
-              val MIFalseHam = computeMutualInformationFactor(probaHW.map(x => (x._1, 1 - x._2)), probaW, probaH, 0.2 / nbFiles)
-              val MIFalseSpam = computeMutualInformationFactor(probaSW.map(x => (x._1, 1 - x._2)), probaW, probaS, 0.2 / nbFiles)
-
-              //compute the mutual information of each word as a RDD with the map structure: word => MI(word)
-              //sum the prob for all words
-              val MI :RDD[(String, Double)] = MITrueHam.union(MITrueSpam).union(MIFalseHam).union(MIFalseSpam).reduceByKey( (x, y) => x + y)
-
-              // print on screen the 10 top words (maximizing the mutual information value)
-              //These words must be also stored on HDFS in the file “/tmp/topWords.txt”.
-              val path: String = "/tmp/topWords.txt"
-              val topTenWords: Array[(String, Double)] = MI.top(10)(Ordering[Double].on(x => x._2))
-              //coalesce to put the results in a single file
-              sc.parallelize(topTenWords).keys.coalesce(1, true).saveAsTextFile(path)
-      }
-      else
-              println("Please write te directory where the ham and spam")
-}
-
-\end{lstlisting}
-
-Function: computeMutualInformationFactor
+\section{Task}
+We computed function: computeMutualInformationFactor with given formula: \\ \\
+$P(occurs, class)log_2 \Big(\frac{P(occurs, class)}{P(occurs)P(class)}\Big)$ \\
 \begin{lstlisting}
 def computeMutualInformationFactor(
   probaWC: RDD[(String, Double)],//prob of just a class, some word could not be 
@@ -285,12 +232,165 @@ def computeMutualInformationFactor(
           //p(occurs) = 
           val probWJoin: RDD[(String, (Double, Option[Double]))] = probaW.leftOuterJoin(probaWC)// got all class probs, if not -> default
                               //p(accurs)  p(accurs,class) 
+	//probWJoin -> class org.apache.spark.rdd.MapPartitionsRDD
           val valueClassAndOcu: RDD[(String, (Double, Double))] = probWJoin.map(x => (x._1, (x._2._1, x._2._2.getOrElse(probaDefault))))
-          //We have to change ln to log2 (by using ln(x)/ln(2)=log2(x)
+          
           valueClassAndOcu.map(x => (x._1, x._2._2 * (math.log(x._2._2 / (x._2._1 * probaC)) / math.log(2.0))))
+	  //valueClassAndOcu -> class org.apache.spark.rdd.MapPartitionsRDD
 
 }
 \end{lstlisting}
+
+probaWC is a RDD with the map structure: word => probability the word occurs in an email of a given class. \\
+probaW has the map structure: word => probability the word occurs (whatever the class).\\ 
+probaC is the probability that an email belongs to the given class. \\
+probaDefault is a probability when a word does not occur in both classes but only one with value given by formula: \\
+$\frac{0.2}{totalNumberOfFiles}$\\
+This function returns the factor of each words (so it returns a RDD) given a class value (spam or ham) and an occurrence value
+(true or false).
+
+\section{Task}
+
+\begin{alphalist}
+	\item We computed the couples (probaWordHam, nbFilesHam) for the directory 'ham' and (probaWordSpam, nbFilesSpam) for the directory 'spam'.
+	\item We computed the probability P(occurs, class) for each word. There are two values of class ('ham' and 'spam') and two values of occurs ('true' or 'true'). Hence, we obtained 4 RDDs, one RDD for each case: (true,ham), (true, spam), (false, ham) and (false, spam). Each RDD has the map structure: word => probability the word occurs (or not) in an email of a given class.
+	\item We computed the mutual information of each word as a RDD with the map structure: word => MI(word). With the usage of the function	computeMutualInformationFactor. If a word occurs in only one class, its	joint probability with the other class takes on the default value probaDefault defined earlier.	The function computeMutualInformationFactor is called 4 times for each possible value of P(occurs, class): (true,ham), (true, spam), (false, ham) and (false, spam).
+	\item The main function  prints on screen the 20 top words (maximizing the mutual information value) which can be used to distinguish a spam from an ham email by using the mutual information. \\
+
+We have obtained this list of words: \\
+number of files in hdfs:///tmp/ling-spam/ham/*.txt:2412:
+
+      \begin{itemize}
+	      \item (Subject:,1.0)
+	      \item (language,0.6737147595356551)
+	      \item (university,0.6048922056384743)
+	      \item (linguistic,0.5149253731343284)
+	      \item (information,0.45480928689883915)
+	      \item (``,0.43905472636815923)
+	      \item ('s,0.4369817578772803)
+	      \item (1,0.4253731343283582)
+	      \item (one,0.41376451077943616)
+	      \item (include,0.38930348258706465)
+	      \item (please,0.38225538971807627)
+	      \item (fax,0.37603648424543945)
+	      \item (http,0.3756218905472637)
+	      \item (e,0.37354892205638474)
+	      \item (english,0.36069651741293535)
+	      \item (2,0.3561359867330017)
+	      \item (;,0.3511608623548922)
+	      \item (address,0.35074626865671643)
+	      \item (follow,0.3490878938640133)
+	      \item (send,0.33996683250414594)
+
+      \end{itemize}
+       number of files in hdfs:///tmp/ling-spam/spam/*.txt:481
+      \begin{itemize}
+	      \item (Subject:,1.0)
+	      \item (!,0.8295218295218295)
+	      \item (our,0.604989604989605)
+	      \item (free,0.5738045738045738)
+	      \item (\$,0.5384615384615384)
+	      \item (please,0.5322245322245323)
+	      \item ('s,0.525987525987526)
+	      \item (mail,0.5031185031185031)
+	      \item (?,0.4968814968814969)
+	      \item (",0.49272349272349275)
+	      \item (one,0.4802494802494803)
+	      \item (0,0.4677754677754678)
+	      \item (address,0.45322245322245325)
+	      \item (*,0.45114345114345117)
+	      \item (list,0.4490644490644491)
+	      \item (receive,0.44282744282744285)
+	      \item (com,0.44282744282744285)
+	      \item (information,0.4386694386694387)
+	      \item (http,0.4386694386694387)
+	      \item (send,0.43451143451143454)
+	      \item print 10 words:                                                                 
+	      \item (Subject:,NaN)
+	      \item (frye,23.82071883488019)
+	      \item (troubleshoot,23.82071883488019)
+	      \item (954,23.82071883488019)
+	      \item (rakyat,23.82071883488019)
+	      \item (telephony,23.82071883488019)
+	      \item (slap,23.82071883488019)
+	      \item (richey,23.82071883488019)
+	      \item (wales,23.82071883488019)
+	      \item (cake,23.82071883488019)
+
+      \end{itemize}
+	\item These top words are also stored on HDFS in the file
+	'/tmp/topWords.txt'
+\end{alphalist}
+Main function:
+\begin{lstlisting}
+def main(args: Array[String]) {
+
+      if(args.size > 0){
+              val conf = new SparkConf().setAppName("Spam Filter Application").setMaster("local")
+	      //conf -> class org.apache.spark.SparkConf
+              val sc = new SparkContext(conf)
+	      //sc ->  class org.apache.spark.SparkContext
+              println("Got the path:"+args(0))
+              // args(0) should be something like "hdfs:///project/, see readme
+
+              //process ham files
+              val (probaHW, nbHFiles) = probaWordDir(sc)(args(0)+"ham/*.txt")
+              //probaHW -> class org.apache.spark.rdd.MapPartitionsRDD
+	      //nbHFiles -> long
+              //process spam files
+              val (probaSW, nbSFiles) = probaWordDir(sc)(args(0)+"spam/*.txt")
+	      //probaSW -> class org.apache.spark.rdd.MapPartitionsRDD
+	      // nbSFiles -> long
+              print("number of files in "+ args(0)+"ham/*.txt" +":")
+              println(nbHFiles)
+              print("number of files in "+ args(0)+"spam/*.txt" +":")
+              println(nbSFiles)
+
+              val nbFiles = nbSFiles + nbHFiles
+	      //nbFiles -> long
+             
+              val probaWs = probaSW.map(x => (x._1,(x._2,1))).union(probaHW.map(x => (x._1,(x._2,0))))
+              //probaWs -> class org.apache.spark.rdd.UnionRDD
+              val probaW = probaWs.reduceByKey((x,y) => if(y._2<1) ((x._1*nbSFiles.toDouble+y._1*nbHFiles.toDouble)/(nbFiles.toDouble),1) else ((y._1*nbSFiles.toDouble+x._1*nbHFiles.toDouble)/(nbFiles.toDouble) ,0)) .map(x => (x._1,x._2._1))
+ 	      //probaW -> class org.apache.spark.rdd.MapPartitionsRDD
+
+
+
+              //Compute the probability P(occurs, class) for each word.
+
+              val probaH = nbHFiles.toDouble / nbFiles.toDouble // the probability that an email belongs to the given class.
+              //probaH -> double
+              val probaS = nbSFiles.toDouble / nbFiles.toDouble
+              //probaS -> double
+              // Compute mutual information for each class and occurs
+              val MITrueHam = computeMutualInformationFactor(probaHW, probaW, probaH, 0.2 / nbFiles) // the last is a default value
+              //MITrueHam -> class org.apache.spark.rdd.MapPartitionsRDD
+              val MITrueSpam = computeMutualInformationFactor(probaSW, probaW, probaS, 0.2 / nbFiles)
+              //MITrueSpam -> class org.apache.spark.rdd.MapPartitionsRDD
+              val MIFalseHam = computeMutualInformationFactor(probaHW.map(x => (x._1, 1 - x._2)), probaW, probaH, 0.2 / nbFiles)
+              //MIFalseHam -> class org.apache.spark.rdd.MapPartitionsRDD
+              val MIFalseSpam = computeMutualInformationFactor(probaSW.map(x => (x._1, 1 - x._2)), probaW, probaS, 0.2 / nbFiles)
+              //MIFalseSpam -> class org.apache.spark.rdd.MapPartitionsRDD
+
+              //compute the mutual information of each word as a RDD with the map structure: word => MI(word)
+              //sum the prob for all words
+              val MI :RDD[(String, Double)] = MITrueHam.union(MITrueSpam).union(MIFalseHam).union(MIFalseSpam).reduceByKey( (x, y) => x + y)
+              //MI -> class org.apache.spark.rdd.ShuffledRDD
+              // print on screen the 10 top words (maximizing the mutual information value)
+              //These words must be also stored on HDFS in the file “/tmp/topWords.txt”.
+              val path: String = "/tmp/topWords.txt"
+              //path -> class java.lang.String
+              val topTenWords: Array[(String, Double)] = MI.top(10)(Ordering[Double].on(x => x._2))
+              //topTenWords -> class [Lscala.Tuple2;
+              //coalesce to put the results in a single file
+              sc.parallelize(topTenWords).keys.coalesce(1, true).saveAsTextFile(path)
+      }
+      else
+              println("Please write te directory where the ham and spam")
+}
+
+\end{lstlisting}
+
 
 %\section{Scala useful functions}
 %\begin{itemize}
