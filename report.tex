@@ -186,6 +186,8 @@ print("number of files in "+ args(0)+"spam/*.txt" +":")
 println(nbSFiles)
 \end{lstlisting}
 
+For each value and variable in the code we put its type in the comment in code in the report.
+
 Function: probaWordDir:
 \begin{lstlisting}
 def probaWordDir(sc:SparkContext)(filesDir:String)
@@ -282,6 +284,8 @@ We have obtained this list of top 20 words: \\
 \item (pristine,23.820986127869574)
      
       \end{itemize}
+      Once we get these top words, they can be used to classify spam emails or ham emails based on the number of occurrences of these top words in those emails. So if  there is an email has a high frequency of these top words, it will be easily  classified to spam emails.
+      These top words have bigger mutual information factor, that means they appear rarely in ham emails and they are more frequently in spam emails. So we can classify ham or spam emails based on these top words.
 	\item These top words are also stored on HDFS in the file
 	'/tmp/topWords.txt'
 \end{alphalist}
